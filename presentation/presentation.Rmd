@@ -81,7 +81,7 @@ regularization procedure well stablished in the literature.
 
 - Options exist, but  they still need to be evaluated and popularized. 
 
-- The main goals of this presentention are to understand and 
+- The main goals of this presentation are to understand and 
 explore regularization approaches for trees and random forests, focusing
 in the one proposed in `r Cite(bibs[key = "guided"])`. 
 
@@ -93,6 +93,7 @@ class: inverse, middle, center
 # 2. Tree-based models
 
 ---
+# 2. Tree-based models
 ## Trees
 
 Consider a variable of interest $Y_i \in \mathbb{R}$ 
@@ -117,7 +118,6 @@ to create prediction rules.
 
 
 ---
-# 2. Tree-based models
 ## Trees
 
 Each rule has the form: $x_j > x_{j,th}$, where  $x_j$ describes the value
@@ -171,7 +171,7 @@ and averaging the predictions is called bagging ensemble
 
 Random forests `r Cite(bibs[key = "Breiman2001"])` 
 are a combination of trees that improves the bagging method by decorrelating
-the trees by considerating only a sample $m$ of the predictors as splitting 
+the trees, by considering only a sample $m$ of the predictors as splitting 
 the candidate for each tree.  
   - The variables are selected randomly and $m$ is chosen 
   as approximately $\sqrt p$, with $p$ being the total of available features.
@@ -185,7 +185,7 @@ algorithm will be less variable and, hence, more reliable
 ## Random Forests
 
 - One characteristic of the random forest model
-is that feature importance plots can be constructed in a very easy way:
+is that feature importance metrics can be obtained in a very easy way:
   - At each split in a tree, the improvement in the splitting criterion
   is the importance measure attributed to the respective variable. 
   - Those values are accumulated over all of the trees in the forest, 
