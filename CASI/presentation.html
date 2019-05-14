@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Regularization Methods in Random Forests</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Bruna Wundervald, Andrew Parnell &amp; Katarina Domijan" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <script src="libs/kePrint/kePrint.js"></script>
+    <link rel="stylesheet" href="libs/maynooth.css" type="text/css" />
+    <link rel="stylesheet" href="libs/maynooth-fonts.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Regularization Methods in Random Forests
+## 39th Conference On Applied Statistics In Ireland
+### Bruna Wundervald, Andrew Parnell &amp; Katarina Domijan
+### May, 2019
+
+---
+
+
+
+class: middle
+
+# Outline
+
+  1. Motivation
+  2. Tree-based models
+    - Trees
+    - Random Forests
+  3. Regularization in Random Forests
+    - Guided Regularization in Random Forests (GRRF)
+  4. Extending the GRRF
+    - Methods
+    - Results 
+  5. Conclusions and Final Remarks
+
+
+---
+class: inverse, middle, center
+
+
+# 1.  Motivation
+
+---
+# 1.  Motivation
+
+- Predictors can be hard or economically expensive to obtain. 
+
+- Feature selection `\(\neq\)` Shrinkage/regularization: 'shrinks' the regression coefficients towards zero. 
+
+- For tree-based methods, there is not yet a well stablished 
+regularization procedure in the literature.
+
+- We are interested in tree models when there are many more predictors than observations:
+  - Simulated data 
+  - Real data 
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/dim.png" alt="Figure 1. Big P, small n" width="30%" /&gt;
+&lt;p class="caption"&gt;Figure 1. Big P, small n&lt;/p&gt;
+&lt;/div&gt;
+
+
+---
+class: inverse, middle, center
+
+
+# 2. Tree-based models
+
+---
+# 2. Tree-based models
+## Trees
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/trees.png" alt="Figure 1. Example of a decision tree. " width="50%" /&gt;
+&lt;p class="caption"&gt;Figure 1. Example of a decision tree. &lt;/p&gt;
+&lt;/div&gt;
+
+
+---
+## Trees
+
+Consider a continuous variable of interest `\(Y_i \in \mathbb{R}\)` 
+and `\(\mathbf{x} = (x_{i1},\dots, x_{ip})'\)` the set 
+of predictor features, `\(1 \leq i \leq p\)`. 
+
+- Each estimated rule has the form: `\(x_j &gt; x_{j,th}\)`, where 
+`\(x_j\)` describes the value of the feature at `\(j\)` and `\(x_{j,th}\)` is the 
+decision cut point. 
+
+- The model predicts `\(Y\)` with a constant `\(c_m\)` in each splitted region `\(R_m\)`,
+usually the mean of `\(y\)`, or
+
+`\begin{equation}
+\hat f(\mathbf{x_i}) =  \sum_{m = 1}^{M} c_m I\{\mathbf{x_i} \in R_m  \},
+\end{equation}`
+
+where `\(\mathbf{x}\)` represents the set of predictor variables. 
+
+- The minimized measure is the residual sum of squares, given by
+
+`\begin{equation}
+RSS_{tree} =  \sum_{j = 1}^{J} \sum_{i \in R_j} (y_i - \hat y_{R_j})^2
+\end{equation}`
+
+where `\(\hat y_{R_j}\)` is the mean response for the observations in the 
+*j*th region of the predictors space. 
+
+
+---
+## Random Forests 
+
+- It is an average of many trees grown in Bootstrap samples.
+- Simple way to reduce variance in tree models: 
+  - take many training sets from the population with bootstrap resampling,
+  - build a separate prediction for each dataset and 
+  - average the their final predictions, resulting in
+
+`\begin{equation}
+\hat f_{avg}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} \hat 
+f^{(b)}(\mathbf{x}),
+\end{equation}`
+
+
+- Only `\(m \approx \sqrt p\)` variables are used in each tree, randomly selected (Hastie, Tibshirani, and Friedman, 2009)
+
+---
+## Variable importance in Random Forests
+
+  - The improvement in the splitting criteria (RSS) is recorded for 
+  each variable
+  
+  - Those values are accumulated over all of the trees
+
+- It facilitates feature selection in random forests
+
+- Unwanted behaviour when in the presence of highly correlated variables: 
+the importances are split between the correlated features. 
+
+
+
+
+
+
+
+
+---
+class: inverse, middle, center
+#  3. Regularization
+
+---
+#  3. Regularization
+
+- Regularized regression consists in estimating a penalized function of the form
+
+`\begin{equation}
+\underset{f \in H}{min} \Big[ \sum_{i = 1}^{N}
+L(y_i, f(x_i)) + \lambda J(f) \Big ], 
+\end{equation}`
+
+
+where `\(L(y, f(x))\)` is the chosen loss function, `\(J(f)\)` is a penalty
+functional, and `\(H\)` is a space of functions on which `\(J(f)\)` is defined
+(Hastie, Tibshirani, and Friedman, 2009).
+
+- Produces models that are more parsimonious and have similar 
+prediction error as the full model. 
+
+- It is usually robust enough to not be influenced by the correlated variables. 
+
+---
+## Regularization in Random Forests
+
+- One option is presented in (Deng and Runger, 2012):
+  - The authors **penalize the variable importance values** of each 
+  variable for each tree when building a random forest.
+
+- The main idea is to weigh the gain of each variable, with
+
+`$$\begin{equation} Gain_{R}(X_i, v) =  \begin{cases} \lambda_i Gain(X_i, v), i \notin F \text{ and} \\ Gain(X_i, v), i \in F,  \end{cases} \end{equation}$$`
+
+
+where `\(F\)` represents the set of indices used in the previous nodes and 
+`\(\lambda_i \in (0, 1]\)` is the penalization applied to the splitting. 
+
+
+- The variables will only get pick if their gain is **very** high. 
+
+
+---
+## Regularization in Random Forests
+
+
+The Guided Regularized Random Forests (GRRF) proposes the regularization
+parameter `\(\lambda_i\)` as: 
+
+`\begin{equation}
+\lambda_i = (1 - \gamma)\lambda_0 + \gamma Imp'_{i},  
+\end{equation}`
+
+being that `\(\lambda_0\)` represents the baseline regularization parameter 
+and `\(\gamma \in [0, 1]\)`, and `\(Imp'_{i}\)` is a standardized importance measure obtained from a random forest. 
+
+- Larger `\(\gamma\)` = smaller `\(\lambda_i\)` =  larger penalty on `\(Gain(X_i, v)\)`
+
+
+- &lt;b&gt;We generalize the method to&lt;/b&gt;
+
+$$ \lambda_i = (1 - \gamma) \lambda_0(v) + \gamma g(X_i), $$ 
+
+where `\(g(X_i)\)` is some function of the covariates and `\(\lambda_0(v)\)` can
+depend on some characteristic of the tree. 
+
+- Gives us more flexibility regarding the weights 
+of the gains for each variable.  
+
+---
+class: inverse, middle, center
+
+
+#  4. Extending the GRRF
+
+---
+## Methods: models 
+
+- Our next results are using the GRRF with three main configurations:
+
+  1. Fixing `\(\gamma = 0.9\)`,  `\(\lambda_0(v) = 0.8\)` and `\(g(X_i) = Imp_{i}^{'}\)`, or
+  `$$\lambda_i = (1 - 0.9) 0.8 + 0.9 Imp_{i}^{'}$$`
+  
+  2. Fixing `\(\gamma = 1\)`, `\(\lambda_0(v) = 0\)` and `\(g(X_i) = |corr(X_i, y)|\)`, or 
+  `$$\lambda_i = (1 - 1) 0 + 1 |corr(X_i, y)|$$`
+  
+  3.  Fixing `\(\gamma = 0.9\)`, `\(\lambda_0(v) = 0\)` and 
+`\(\begin{equation} g(X_i) =  \begin{cases} |corr(X_i, y)| Imp_{i}^{'} \textbf{,   if } |corr(X_i, y)| &gt; 0.5 \text{ and} \\ Imp_{i}^{'} 0.2 \textbf{,   if } |corr(X_i, y)| \leq 0.5 \end{cases} \end{equation}\)`, or 
+
+`$$\begin{equation} \lambda_i =  \begin{cases} (1 - 0.9) 0 + 0.9 Imp_{i}^{'}  |corr(X_i, y)| \textbf{,   if } |corr(X_i, y)| &gt; 0.5  \\  (1 - 0.9) 0 + 0.9 Imp_{i}^{'} 0.2 \textbf{,   if } |corr(X_i, y)| \leq 0.5  \\ \end{cases} \end{equation}$$`
+
+we &lt;b&gt;weigh down&lt;/b&gt; the variables that were not much correlated to the
+response, using the Spearman correlation.
+
+
+---
+## Methods: simulating data 
+
+Using the model equation proposed in 
+(Friedman, 1991) , we simulated a 
+response variable `\(Y\)` and its relationship to
+a matrix of predictors `\(\mathbf{X}\)` as
+
+`\begin{equation}
+y_i = 10 sin(\pi x_{i1} x_{i2}) + 20 (x_{i3} -
+0.5)^{2} + 10 x_{i4} + 5 x_{i5} +
+ \epsilon_i, \thinspace
+\epsilon_i \stackrel{iid}\sim N(0, \sigma^2),
+\end{equation}`
+
+where `\(\mathbf{X} \in [0, 1]\)`, so the predictors
+were randomly drawn from a standard Uniform distribution. 
+
+- Creates nonlinear relationships and interactions between the response and the predictors. 
+
+- The five true predictors were added to:
+
+  - 25 variables correlated to one of the true predictors (randomly selected);
+  - 30 different variables drawn from a Normal distribution, with a random mean and standard deviation (pure noise); 
+
+
+- **50** different datasets of the same form were simulated and split into
+train (75%) and test (25%) sets. 
+
+**Why should we care about correlated predictors?**
+
+---
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/rf_comparison.png" alt="Figure 2. Mean variable importance obtained from a standard Random Forest applied to the 50 simulated datasets, with the correlated variables and without them." width="80%" /&gt;
+&lt;p class="caption"&gt;Figure 2. Mean variable importance obtained from a standard Random Forest applied to the 50 simulated datasets, with the correlated variables and without them.&lt;/p&gt;
+&lt;/div&gt;
+
+Clear split of the importance between the correlated variables in a standard Random Forest! **Misleading when we need to select variables.**
+
+---
+
+## Applying the models: simulated data
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/sim_corr_results.png" alt="Figure 3. Results for the simulated data: Root mean squared errors and counts of final variables in each model " width="100%" /&gt;
+&lt;p class="caption"&gt;Figure 3. Results for the simulated data: Root mean squared errors and counts of final variables in each model &lt;/p&gt;
+&lt;/div&gt;
+
+---
+
+## Results: simulated data
+
+- All models selected a small amount of variables. 
+- Less variables for the third method: ideal scenario when we need to do
+regularization
+
+**Given the correlated variables, which were selected by the models?**
+
+
+&lt;table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+&lt;caption&gt;Table 1. Percentage of variables for each model that were the true ones or correlated to the true ones.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Model &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Percentage &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3rd: Gamma, importance scores and correlation &lt;/td&gt;
+   &lt;td style="text-align:left;width: 4cm; "&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightgreen; width: 100.00%"&gt;0.933&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2nd: Correlation &lt;/td&gt;
+   &lt;td style="text-align:left;width: 4cm; "&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightyellow; width: 98.61%"&gt;0.920&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1st: Using lambda and gamma &lt;/td&gt;
+   &lt;td style="text-align:left;width: 4cm; "&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightyellow; width: 94.96%"&gt;0.886&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+- **We avoided the correlated predictors issue!**
+
+
+---
+## Applying the models: real data
+
+- Goal: predict the log of best race distance for breeded race horses
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/horse.jpg" alt="Figure 3. Race horses." width="80%" /&gt;
+&lt;p class="caption"&gt;Figure 3. Race horses.&lt;/p&gt;
+&lt;/div&gt;
+
+---
+
+## Applying the models: real data
+
+- Predictors: trinary SNP and general variables including sex, inbreeding, 
+and region.
+
+- Main issues:
+  - Big P, small n!
+  - Predictors are **correlated**,
+  - Each variable is **very** expensive to obtain. 
+
+- Data:
+  - Originally 48910 predictors and 835 observations
+  
+  - The dataset was previously filtered for the predictors that had at
+  least some correlation with the response (&gt;0.15)
+    - Resulted in 3582 predictors
+    
+  - The filtered dataset was split in 50 different train (75%) and
+test sets (25%). 
+
+
+---
+
+## Results: real data
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/real_data_results.png" alt="Figure 4. Results for the real data: Root mean squared errors and counts of final variables in each model" width="100%" /&gt;
+&lt;p class="caption"&gt;Figure 4. Results for the real data: Root mean squared errors and counts of final variables in each model&lt;/p&gt;
+&lt;/div&gt;
+
+
+---
+
+## Results: real data
+
+&lt;table&gt;
+&lt;caption&gt;Table 2. Summary of number of selected variables in each model.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Model &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Max. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Min. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Mean &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3rd: Gamma, importance scores and correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 41 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 30 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 34.44 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2nd: Correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 1799 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1785 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1791.22 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1st: Using lambda and gamma &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 118 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 92 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 106.54 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;table&gt;
+&lt;caption&gt;Table 3. Summary of root mean squared errors for each model.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Model &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Max. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Min. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Mean &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3rd: Gamma, importance scores and correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.254 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.201 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.233 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2nd: Correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.245 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.192 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.221 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1st: Using lambda and gamma &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.251 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.191 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.226 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+---
+
+## What if we have a limited number of variables to use?
+
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="img/mean_imp.png" alt="Figure 5. Top 15 mean importance for the variables of each model"  /&gt;
+&lt;p class="caption"&gt;Figure 5. Top 15 mean importance for the variables of each model&lt;/p&gt;
+&lt;/div&gt;
+
+
+---
+
+## Using the top 15 variables of each model
+
+- We run a standard Random Forest model using the 15 most important variables for each model
+
+- Which model gives us the best predictions if we have a limit of variables to use?
+
+&lt;table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;"&gt;
+&lt;caption&gt;Table 5. Summary of root mean squared error in the test set when using the top 15 variables of each model in the 50 datasets&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Model &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Max. &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Min. &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Mean &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 3rd: Gamma, importance scores and correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.2404 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1845 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightgreen; width: 96.55%"&gt;0.2157&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 2nd: Correlation &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.2527 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1872 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightyellow; width: 100.00%"&gt;0.2234&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; 1st: Using lambda and gamma &lt;/td&gt;
+   &lt;td style="text-align:right;width: 4cm; "&gt; 0.2458 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.1913 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="display: inline-block; direction: rtl; border-radius: 4px; padding-right: 2px; background-color: lightyellow; width: 97.76%"&gt;0.2184&lt;/span&gt; &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+---
+class: inverse, middle, center
+
+
+#  5. Conclusions and Final Remarks
+
+---
+#  5. Conclusions and Final Remarks
+
+- Variable selection in Random Forests is still a topic to be explored
+
+- **The GRRF, as proposed in (Deng and Runger, 2012), does not perform the most strict regularization as desired.**
+
+
+- The third model performed well in the real dataset:
+  - It selected way less variables,
+  - The model kept a similar prediction power than bigger models,
+  - The selected variables were not overall correlated. 
+
+- For categorical predictor variables, correlation might not be the best 
+measure to use
+
+- Next steps include proposing new ways of regularizing the trees:
+  - Potentially considering the depth of each tree 
+  - Delimiting the maximum number of variables to select
+
+`Code at: https://github.com/brunaw/regularization-rf` 
+
+---
+class: center, middle
+
+## Acknowledgments
+
+This work was supported by a Science Foundation Ireland Career Development Award grant number: 17/CDA/4695
+
+&lt;img src="img/SFI_logo.jpg" width="50%" height="40%" style="display: block; margin: auto;" /&gt;
+
+
+---
+# Bibliography
+
+
+&lt;p&gt;&lt;cite&gt;Breiman, L.
+(2001).
+&amp;ldquo;Random Forests&amp;rdquo;.
+In: &lt;em&gt;Machine Learning&lt;/em&gt;.
+ISSN: 1098-6596.
+DOI: &lt;a href="https://doi.org/10.1017/CBO9781107415324.004"&gt;10.1017/CBO9781107415324.004&lt;/a&gt;.
+eprint: arXiv:1011.1669v3.&lt;/cite&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;cite&gt;&lt;a id='bib-guided'&gt;&lt;/a&gt;&lt;a href="#cite-guided"&gt;Deng, H. and G. C. Runger&lt;/a&gt;
+(2012).
+&amp;ldquo;Gene selection with guided regularized random forest&amp;rdquo;.
+In: &lt;em&gt;CoRR&lt;/em&gt; abs/1209.6425.
+eprint: 1209.6425.
+URL: &lt;a href="http://arxiv.org/abs/1209.6425"&gt;http://arxiv.org/abs/1209.6425&lt;/a&gt;.&lt;/cite&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;cite&gt;&lt;a id='bib-Friedman1991'&gt;&lt;/a&gt;&lt;a href="#cite-Friedman1991"&gt;Friedman, J. H.&lt;/a&gt;
+(1991).
+&amp;ldquo;Rejoinder: Multivariate Adaptive Regression Splines&amp;rdquo;.
+In: &lt;em&gt;The Annals of Statistics&lt;/em&gt;.
+ISSN: 0090-5364.
+DOI: &lt;a href="https://doi.org/10.1214/aos/1176347973"&gt;10.1214/aos/1176347973&lt;/a&gt;.
+eprint: arXiv:1306.3979v1.&lt;/cite&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;cite&gt;&lt;a id='bib-HastieTrevor'&gt;&lt;/a&gt;&lt;a href="#cite-HastieTrevor"&gt;Hastie, T, R. Tibshirani, and J. Friedman&lt;/a&gt;
+(2009).
+&amp;ldquo;The Elements of Statistical Learning&amp;rdquo;.
+In: &lt;em&gt;Elements&lt;/em&gt; 1, pp. 337&amp;ndash;387.
+ISSN: 03436993.
+DOI: &lt;a href="https://doi.org/10.1007/b94608"&gt;10.1007/b94608&lt;/a&gt;.
+eprint: 1010.3003.
+URL: &lt;a href="http://www.springerlink.com/index/10.1007/b94608"&gt;http://www.springerlink.com/index/10.1007/b94608&lt;/a&gt;.&lt;/cite&gt;&lt;/p&gt;
+
+
+---
+class: center, middle, inverse
+
+# Thanks!
+
+
+&lt;img src= "https://s3.amazonaws.com/kleebtronics-media/img/icons/github-white.png", width="50", height="50",  align="middle"&gt; 
+
+&lt;b&gt;
+
+[@brunaw](https://github.com/brunaw)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

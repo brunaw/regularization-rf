@@ -1,0 +1,17 @@
+---
+title: "Untitled"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\begin{equation}
+Gain_{R}(X_i, v) = 
+\begin{cases}
+ Gain(X_i, v), i \notin F \text{ and} \\
+Gain(X_i, v), i \in F, 
+\end{cases}
+\end{equation}
+
