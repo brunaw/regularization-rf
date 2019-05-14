@@ -4,11 +4,8 @@
 # Bruna Wundervald                                  #        
 # January, 2019                                     #        
 #---------------------------------------------------#
-
 library(tidyverse)
 library(RRF)
-
-#setwd("/users/bruna/Project 1")
 
 # Real gene data ------------------------------------------------------
 da <-  data.table::fread("data/PV_Data1_ANON.csv") %>% 
@@ -18,7 +15,7 @@ dim(da)
 
 # Marginal correlations to the response
 corr_fc <- function(var){
-  cor(da$log_brd5, y = train %>% pull(var))
+  cor(da$log_brd5, y = da %>% pull(var))
 }
 
 # Splitting in train and test data ------------------------------------
@@ -79,16 +76,37 @@ rrf_new
 pred <- predict(rrf_new, newdata = test)
 mean((pred - test$log_brd5)^2) 
 
-#-----------------------------------------------------------------------
-# Summary of the results
-#-----------------------------------------------------------------------
-# Using correlation as the weight
-# Vars. selected = 100
-# % var explained: 43.4
-# MSE = 0.051
-# MSE in test set = 0.050
-# MSE with the top 10 variables in the test set: 0.054
-#-----------------------------------------------------------------------
+#---------------------------------------------------#
+# Regularized Random Forests                        #        
+# Bruna Wundervald                                  #        
+# Arpil, 2019                                       #        
+#---------------------------------------------------#
+library(tidyverse) # essential tools
+library(RRF) # regularized random forest
+library(patchwork)
+
+mse <- function(model){
+  res <- test$y - predict(model, test)
+  mean(res^2) 
+}
+
+
+pars <- function(model){
+  length(model$feaSet) 
+}
+
+
+da <- read.table("data/fried_added.txt") 
+
+set.seed(2019)
+
+split <- da %>% 
+  mutate(set = ifelse(
+    runif(nrow(.)) > 0.75, "train", "test"))
+
+# Train and test set split 
+train <- split %>% filter(set == "train") %>% select(-set)
+test <- split %>% filter(set == "test") %>% select(-set)
 # Pre-selecting variables using the correlation criteria
 # Vars. selected = 70
 # % var explained: 59.63%

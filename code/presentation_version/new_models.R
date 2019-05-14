@@ -1,76 +1,101 @@
 #---------------------------------------------------#
-# Guided Regularized Random Forests                 #
-# Testing differents weights                        #
+# Regularized Random Forests                        #        
 # Bruna Wundervald                                  #        
-# January, 2019                                     #        
+# April, 2019                                       #        
 #---------------------------------------------------#
-
-library(tidyverse)
-library(RRF)
+library(tidyverse) # essential tools
+library(RRF) # regularized random forest
 library(patchwork)
 
-#setwd("/users/bruna/Project 1")
-
-# Real gene data ------------------------------------------------------
-da <-  data.table::fread("data/PV_Data1_ANON.csv") %>% 
-  select(-idPhen) 
-
-dim(da)
-
-# Marginal correlations to the response
-corr_fc <- function(var){
-  cor(train$log_brd5, y = train %>% pull(var))
+rmse <- function(model){
+  res <- test$y - predict(model, test)
+  sqrt(mean(res^2))
 }
 
-# Function to calculate the mean squared errors in the test set
-msr <- function(model){
-  res <- test$log_brd5 - predict(model, test)
-  mean(res^2) 
+
+pars <- function(model){
+  length(model$feaSet) 
 }
 
-# Splitting in train and test data ------------------------------------
+
+da <- read.table("data/fried_added.txt") 
+
 set.seed(2019)
+
 split <- da %>% 
   mutate(set = ifelse(
-    runif(nrow(.)) > 0.75, "train", "test"))
+    runif(nrow(.)) > 0.75, "test", "train"))
 
-split %>% 
-  janitor::tabyl(set) %>% 
-  mutate(percent = scales::percent(percent))
-
+# Train and test set split 
 train <- split %>% filter(set == "train") %>% select(-set)
 test <- split %>% filter(set == "test") %>% select(-set)
 
-# Applying marginal correlation as the variable weights ----------------
-nam <- names(da)[-1]
-
-correlations <- readRDS("correlations.rds")
-
-length(nam[abs(correlations) > 0.16]) # 2626
-
-selected_vars <- nam[abs(correlations) > 0.16] %>% 
-  paste(collapse = ' + ')
-
-corr_weight <- correlations[abs(correlations) > 0.16]
-
-form <- as.formula(paste("log_brd5 ~ ", selected_vars))
-
-
-# First model: using the marginal abs(correlations) as weights
-
-fc_corr_model <- function(i){
-  set.seed(i)
-  RRF(form, data = train, coefReg =  abs(corr_weight))
+# Using only the correlation as weighting 
+corr_fc <- function(var){
+  cor(da$y, y = da %>% pull(var), method = "spearman")
 }
 
-models_correlation <- 1:100 %>% 
-  purrr::map(fc_corr_model)
-# Time:  - 10h
+nam <- names(da)[-6]
 
-# Second model: using the usual lambda and gamma as weighting
+corr_vars <- nam %>% 
+  purrr::map_dbl(corr_fc)
+sort(corr_vars)
+
+selected_vars <- nam[abs(corr_vars) > 0.01] %>% 
+  paste(collapse = ' + ')
+
+corr_weight <- corr_vars[abs(corr_vars) > 0.01]
+
+form <- as.formula(paste("y ~ ", selected_vars))
+
+grrf_corr <- RRF(form, data = train,  
+                 coefReg =  abs(corr_weight))
+
+pred <- predict(grrf_corr, newdata = test)
+mean((pred - test$y)^2) # 4.63
+
+# Selected vars
+sel_new <- grrf_corr$importance %>% 
+  as.data.frame() %>% 
+  mutate(var = rownames(grrf_corr$importance)) %>% 
+  arrange(desc(IncNodePurity)) %>% 
+  slice(1:10) %>% 
+  pull(var) %>% 
+  paste(collapse = ' + ')
+
+rrf_new <- randomForest::randomForest(as.formula(
+  paste("y ~", sel_new)), data = train)
+rrf_new
+
+pred <- predict(rrf_new, newdata = test)
+mean((pred - test$y)^2) # 6.024
+
+#-----------------------------------------------------------------------
+# Summary of the results NEED TO UPDATE
+#-----------------------------------------------------------------------
+# Using correlation as the weight
+# Vars. selected = 32
+# % var explained: 91.24
+# MSE = 2.22
+# MSE in test set = 4.63
+# MSE with the top 10 variables in the test set: 4.005
+#-----------------------------------------------------------------------
+
+# First model: sing only the correlation, repeated 250 times
+fc_corr_model <- function(i){
+  set.seed(i)
+  RRF(form, data = train, coefReg =  abs(corr_weight), mtry = 100)
+}
+
+system.time(
+  models_correlation <- 1:100 %>% 
+    purrr::map(fc_corr_model)
+)
+
+# Second model: The model from the paper
 fc_norm_model <- function(i){
   set.seed(i)
-  m1 <- RRF::RRF(form, train, coefReg = 0.8)
+  m1 <- RRF::RRF(form, train, coefReg = 0.8, mtry = 100)
   
   impRF <- m1$importance
   impRF <- impRF[,"IncNodePurity"]    
@@ -79,51 +104,45 @@ fc_norm_model <- function(i){
   gamma = 0.9
   coefReg <- (1 - gamma)*1 + (gamma*imp )
   set.seed(i)
-  RRF(form, data = train, coefReg = coefReg)
+  RRF(form, data = train, coefReg = coefReg, mtry = 100)
 }
 
-model_paper <- 1:100 %>% 
-  purrr::map(fc_norm_model)
-
+system.time(
+  model_paper <- 1:100 %>% 
+    purrr::map(fc_norm_model)
+)
 
 # Third model: using the marginal abs(correlations) *  the usual 
 # lambda and gamma as weighting
 
 fc_normc_model <- function(i){
   set.seed(i)
-  m1 <- RRF::RRF(form, train, coefReg = 0.8)
+  m1 <- RRF::RRF(form, train, coefReg = 0.9, mtry = 100)
   
   impRF <- m1$importance
   impRF <- impRF[,"IncNodePurity"]    
   
-  gamma = 0.95
-  
+  gamma = 0.9
   n <- data.frame(imp = c(impRF)/(max(c(impRF))),
                   corr = abs(corr_weight)) %>% 
     dplyr::mutate(new_weigth = ifelse(corr > 0.5, 
-                                      (1 - gamma)*1 + (gamma*imp*corr),
-                                      (1 - gamma)*1 + (gamma*imp*0.2)))
+                                      gamma*imp*corr,
+                                      gamma*imp*0.3))
   
   
   set.seed(i)
-  RRF(form, data = train, coefReg = n$new_weigth)
+  RRF(form, data = train, coefReg = n$new_weigth, mtry = 100)
 }
 
-model_corre_imp <- 1:100 %>% 
-  purrr::map(fc_normc_model)
+system.time(
+  model_corre_imp <- 1:100 %>% 
+    purrr::map(fc_normc_model)
+)
 
-saveRDS(list(models_correlation, model_paper, 
-             model_corre_imp), "models.rds")
-
-# models_correlation <- models[[1]]
-# model_paper <- models[[2]]
-# model_corre_imp <- models[[3]]
-
-# Visualising results --------------------------------------------------
 results <- data.frame(
-  corr = models_correlation %>% purrr::map_dbl(msr),
-  norm = model_paper %>% purrr::map_dbl(msr),
-  normc = model_corre_imp %>% purrr::map_dbl(msr))
+  corr = models_correlation %>% purrr::map_dbl(rmse),
+  norm = model_paper %>% purrr::map_dbl(rmse),
+  normc = model_corre_imp %>% purrr::map_dbl(rmse))
 
 res_formatted <- results %>% 
   gather("model", "value") %>% 
@@ -134,7 +153,7 @@ res_formatted <- results %>%
     "Using lambda and gamma * correlation" = "normc"
   ))
 
-
+head(res_formatted)
 p1 <- res_formatted %>% 
   ggplot(aes(x = value, group = model)) +
   geom_density(aes(fill = model), size = 0.7, 
@@ -142,18 +161,13 @@ p1 <- res_formatted %>%
   scale_fill_manual(
     values = c("#c03728", "#919c4c", "#f5c04a")) +
   guides(fill = FALSE) +
-  xlim(0.0475, 0.0575)  + 
+  #xlim(0.0475, 0.0575)  + 
   labs(x = "Mean squared errors", y = "Density",
        fill = 'Variable weighting', 
        title = "Comparing different weightings for the GRRF",
        subtitle = "Results obtained with 100 runs of each model") +
   theme_bw() 
 
-
-pars <- function(model){
-  length(model$feaSet) 
-}
-  
 
 results_pars <- data.frame(
   corr = models_correlation %>% purrr::map_dbl(pars),
@@ -184,14 +198,10 @@ p2 <- res_pars_formatted %>%
   labs(x = "Number of selected variables", y = "Counts",
        fill = 'Variable weighting', 
        caption = 
-         "Real gene expression data using the variables with marginal
-abs(correlation) to the response > 0.16 (2626)")  + 
+         "Friedman data")  + 
   theme_bw()  +
   theme(legend.position = "bottom",
         legend.direction="vertical")
 
-write_rds(list(p1, p2), "plots.rds")
 
 p1 + p2 + plot_layout(ncol = 1)
-
-#-----------------------------------------------------------------------
