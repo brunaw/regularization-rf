@@ -90,12 +90,11 @@ knitr::include_graphics("img/trees.png")
 
 Consider a continuous variable of interest $Y_i \in \mathbb{R}$ 
 and $\mathbf{x} = (x_{i1},\dots, x_{ip})'$ the set 
-of predictor features, $1 \leq i \leq p$. 
+of predictor features, $i = 1 \dots n$. 
 
 - Each estimated rule has the form: $x_j > x_{j,th}$, where 
 $x_j$ describes the value of the feature at $j$ and $x_{j,th}$ is the 
 decision cut point. 
-
 - The model predicts $Y$ with a constant $c_m$ in each splitted region $R_m$,
 usually the mean of $y$, or
 
@@ -111,8 +110,7 @@ where $\mathbf{x}$ represents the set of predictor variables.
 RSS_{tree} =  \sum_{j = 1}^{J} \sum_{i \in R_j} (y_i - \hat y_{R_j})^2
 \end{equation}
 
-where $\hat y_{R_j}$ is the mean response for the observations in the 
-*j*th region of the predictors space. 
+where $\hat y_{R_j}$ is the mean response in the *j*th region of the predictors'space. 
 
 
 ---
@@ -122,27 +120,23 @@ where $\hat y_{R_j}$ is the mean response for the observations in the
 - Simple way to reduce variance in tree models: 
   - take many training sets from the population with bootstrap resampling,
   - build a separate prediction for each dataset and 
-  - average the their final predictions, resulting in
+  - average their final predictions, resulting in
 
 \begin{equation}
 \hat f_{avg}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} \hat 
 f^{(b)}(\mathbf{x}),
 \end{equation}
 
+`r Cite(bibs[key = "HastieTrevor"])`
 
-- Only $m \approx \sqrt p$ variables are used in each tree, randomly selected `r Cite(bibs[key = "HastieTrevor"])`
-
----
-## Variable importance in Random Forests
-
-  - The improvement in the splitting criteria (RSS) is recorded for 
+<b> Variable importance:</b> improvement in the splitting criteria (RSS) for 
   each variable
   
-  - Those values are accumulated over all of the trees
+- Those values are accumulated over all of the trees
 
 - It facilitates feature selection in random forests
 
-- Unwanted behaviour when in the presence of highly correlated variables: 
+- Unwanted behavior when in the presence of highly correlated variables: 
 the importances are split between the correlated features. 
 
 
@@ -182,8 +176,8 @@ prediction error as the full model.
 ## Regularization in Random Forests
 
 - One option is presented in `r Cite(bibs[key = "guided"])`:
-  - The authors **penalize the variable importance values** of each 
-  variable for each tree when building a random forest.
+  - The authors **penalise the gain (RSS reduction)** of each 
+  variable, for each tree when building a random forest.
 
 - The main idea is to weigh the gain of each variable, with
 
@@ -198,7 +192,7 @@ $\lambda_i \in (0, 1]$ is the penalization applied to the splitting.
 
 
 ---
-## Regularization in Random Forests
+## How is $\lambda_i$ chosen?
 
 
 The Guided Regularized Random Forests (GRRF) proposes the regularization
@@ -218,7 +212,7 @@ and $\gamma \in [0, 1]$, and $Imp'_{i}$ is a standardized importance measure obt
 
 $$ \lambda_i = (1 - \gamma) \lambda_0(v) + \gamma g(X_i), $$ 
 
-where $g(X_i)$ is some function of the covariates and $\lambda_0(v)$ can
+where $g(X_i)$ is some function of the predictors and $\lambda_0(v)$ can
 depend on some characteristic of the tree. 
 
 - Gives us more flexibility regarding the weights 
@@ -283,7 +277,7 @@ train (75%) and test (25%) sets.
 
 ---
 
-```{r, fig.cap="Figure 2. Mean variable importance obtained from a standard Random Forest applied to the 50 simulated datasets, with the correlated variables and without them.", out.width="80%", eval = TRUE}
+```{r, fig.cap="Figure 2. Mean variable importance in a Random Forest applied to the 50 datasets, with the correlated variables and without them.", out.width="80%", eval = TRUE}
 knitr::include_graphics("img/rf_comparison.png")
 ```
 
@@ -293,7 +287,7 @@ Clear split of the importance between the correlated variables in a standard Ran
 
 ## Applying the models: simulated data
 
-```{r, fig.cap="Figure 3. Results for the simulated data: Root mean squared errors and counts of final variables in each model ", out.width="100%", eval = TRUE}
+```{r, fig.cap="Figure 3. Root mean squared errors and counts of final variables in each fit using the simulated data ", out.width="100%", eval = TRUE}
 knitr::include_graphics("img/sim_corr_results.png")
 ```
 
@@ -301,8 +295,8 @@ knitr::include_graphics("img/sim_corr_results.png")
 
 ## Results: simulated data
 
-- All models selected a small amount of variables. 
-- Less variables for the third method: ideal scenario when we need to do
+- All models selected a small number of variables. 
+- Fewer variables for the third method: ideal scenario when we need to do
 regularization
 
 **Given the correlated variables, which were selected by the models?**
@@ -337,15 +331,15 @@ tab %>%
 ```
 
 
-- **We avoided the correlated predictors issue!**
+- **We avoided the correlated predictors'issue!**
 
 
 ---
 ## Applying the models: real data
 
-- Goal: predict the log of best race distance for breeded race horses
+- Goal: predict the log of best race distance for bred racehorses
 
-```{r, fig.cap="Figure 3. Race horses.", out.width="80%", eval = TRUE}
+```{r, fig.cap="Figure 3. Racehorses.", out.width="80%", eval = TRUE}
 knitr::include_graphics("img/horse.jpg")
 ```
 
@@ -368,7 +362,7 @@ and region.
   least some (Spearman) correlation with the response (>0.15)
     - Resulted in 3582 predictors
     
-  - The filtered dataset was split in 50 different train (75%) and
+  - The filtered dataset was split into 50 different train (75%) and
 test sets (25%). 
 
 
@@ -376,7 +370,7 @@ test sets (25%).
 
 ## Results: real data
 
-```{r, fig.cap="Figure 4. Results for the real data: Root mean squared errors and counts of final variables in each model", out.width="100%", eval = TRUE}
+```{r, fig.cap="Figure 4. Root mean squared errors and counts of final variables in each fit using the real data", out.width="100%", eval = TRUE}
 knitr::include_graphics("img/real_data_results.png")
 ```
 
@@ -539,7 +533,7 @@ measure to use
   - Potentially considering the depth of each tree 
   - Delimiting the maximum number of variables to select
 
-`Code at: https://github.com/brunaw/regularization-rf` 
+`Code: https://github.com/brunaw/regularization-rf` 
 
 ---
 class: center, middle

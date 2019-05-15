@@ -32,9 +32,9 @@ class: middle
     - Random Forests
   3. Regularization in Random Forests
     - Guided Regularization in Random Forests (GRRF)
-  4. Extending the GRRF
-    - Methods
-    - Results 
+  4. Applying the GRRF
+    - Simulated data 
+    - Real data 
   5. Conclusions and Final Remarks
 
 
@@ -51,7 +51,7 @@ class: inverse, middle, center
 
 - Feature selection `\(\neq\)` Shrinkage/regularization: 'shrinks' the regression coefficients towards zero. 
 
-- For tree-based methods, there is not yet a well stablished 
+- For tree-based methods, there is not yet a well established 
 regularization procedure in the literature.
 
 - We are interested in tree models when there are many more predictors than observations:
@@ -85,12 +85,11 @@ class: inverse, middle, center
 
 Consider a continuous variable of interest `\(Y_i \in \mathbb{R}\)` 
 and `\(\mathbf{x} = (x_{i1},\dots, x_{ip})'\)` the set 
-of predictor features, `\(1 \leq i \leq p\)`. 
+of predictor features, `\(i = 1 \dots n\)`. 
 
 - Each estimated rule has the form: `\(x_j &gt; x_{j,th}\)`, where 
 `\(x_j\)` describes the value of the feature at `\(j\)` and `\(x_{j,th}\)` is the 
 decision cut point. 
-
 - The model predicts `\(Y\)` with a constant `\(c_m\)` in each splitted region `\(R_m\)`,
 usually the mean of `\(y\)`, or
 
@@ -106,8 +105,7 @@ where `\(\mathbf{x}\)` represents the set of predictor variables.
 RSS_{tree} =  \sum_{j = 1}^{J} \sum_{i \in R_j} (y_i - \hat y_{R_j})^2
 \end{equation}`
 
-where `\(\hat y_{R_j}\)` is the mean response for the observations in the 
-*j*th region of the predictors space. 
+where `\(\hat y_{R_j}\)` is the mean response in the *j*th region of the predictors'space. 
 
 
 ---
@@ -117,27 +115,23 @@ where `\(\hat y_{R_j}\)` is the mean response for the observations in the
 - Simple way to reduce variance in tree models: 
   - take many training sets from the population with bootstrap resampling,
   - build a separate prediction for each dataset and 
-  - average the their final predictions, resulting in
+  - average their final predictions, resulting in
 
 `\begin{equation}
 \hat f_{avg}(\mathbf{x}) = \frac{1}{B} \sum_{b=1}^{B} \hat 
 f^{(b)}(\mathbf{x}),
 \end{equation}`
 
+(Hastie, Tibshirani, and Friedman, 2009)
 
-- Only `\(m \approx \sqrt p\)` variables are used in each tree, randomly selected (Hastie, Tibshirani, and Friedman, 2009)
-
----
-## Variable importance in Random Forests
-
-  - The improvement in the splitting criteria (RSS) is recorded for 
+&lt;b&gt; Variable importance:&lt;/b&gt; improvement in the splitting criteria (RSS) for 
   each variable
   
-  - Those values are accumulated over all of the trees
+- Those values are accumulated over all of the trees
 
 - It facilitates feature selection in random forests
 
-- Unwanted behaviour when in the presence of highly correlated variables: 
+- Unwanted behavior when in the presence of highly correlated variables: 
 the importances are split between the correlated features. 
 
 
@@ -175,8 +169,8 @@ prediction error as the full model.
 ## Regularization in Random Forests
 
 - One option is presented in (Deng and Runger, 2012):
-  - The authors **penalize the variable importance values** of each 
-  variable for each tree when building a random forest.
+  - The authors **penalise the gain (RSS reduction)** of each 
+  variable, for each tree when building a random forest.
 
 - The main idea is to weigh the gain of each variable, with
 
@@ -187,11 +181,11 @@ where `\(F\)` represents the set of indices used in the previous nodes and
 `\(\lambda_i \in (0, 1]\)` is the penalization applied to the splitting. 
 
 
-- The variables will only get pick if their gain is **very** high. 
+- The variables will only get picked if their gain is **very** high. 
 
 
 ---
-## Regularization in Random Forests
+## How is `\(\lambda_i\)` chosen?
 
 
 The Guided Regularized Random Forests (GRRF) proposes the regularization
@@ -211,7 +205,7 @@ and `\(\gamma \in [0, 1]\)`, and `\(Imp'_{i}\)` is a standardized importance mea
 
 $$ \lambda_i = (1 - \gamma) \lambda_0(v) + \gamma g(X_i), $$ 
 
-where `\(g(X_i)\)` is some function of the covariates and `\(\lambda_0(v)\)` can
+where `\(g(X_i)\)` is some function of the predictors and `\(\lambda_0(v)\)` can
 depend on some characteristic of the tree. 
 
 - Gives us more flexibility regarding the weights 
@@ -221,14 +215,14 @@ of the gains for each variable.
 class: inverse, middle, center
 
 
-#  4. Extending the GRRF
+#  4. Applying the GRRF
 
 ---
 ## Methods: models 
 
 - Our next results are using the GRRF with three main configurations:
 
-  1. Fixing `\(\gamma = 0.9\)`,  `\(\lambda_0(v) = 0.8\)` and `\(g(X_i) = Imp_{i}^{'}\)`, or
+  1. Fixing `\(\gamma = 0.9\)`,  `\(\lambda_0(v) = 1\)` and `\(g(X_i) = Imp_{i}^{'}\)`, or
   `$$\lambda_i = (1 - 0.9) 0.8 + 0.9 Imp_{i}^{'}$$`
   
   2. Fixing `\(\gamma = 1\)`, `\(\lambda_0(v) = 0\)` and `\(g(X_i) = |corr(X_i, y)|\)`, or 
@@ -237,7 +231,7 @@ class: inverse, middle, center
   3.  Fixing `\(\gamma = 0.9\)`, `\(\lambda_0(v) = 0\)` and 
 `\(\begin{equation} g(X_i) =  \begin{cases} |corr(X_i, y)| Imp_{i}^{'} \textbf{,   if } |corr(X_i, y)| &gt; 0.5 \text{ and} \\ Imp_{i}^{'} 0.2 \textbf{,   if } |corr(X_i, y)| \leq 0.5 \end{cases} \end{equation}\)`, or 
 
-`$$\begin{equation} \lambda_i =  \begin{cases} (1 - 0.9) 0 + 0.9 Imp_{i}^{'}  |corr(X_i, y)| \textbf{,   if } |corr(X_i, y)| &gt; 0.5  \\  (1 - 0.9) 0 + 0.9 Imp_{i}^{'} 0.2 \textbf{,   if } |corr(X_i, y)| \leq 0.5  \\ \end{cases} \end{equation}$$`
+`$$\begin{equation} \lambda_i =  \begin{cases} (1 - 0.9) 0 + 0.9 Imp_{i}^{'}  |corr(X_i, y)| \textbf{,   if } |corr(X_i, y)| &gt; 0.5  \\  (1 - 0.9) 0 + 0.9 Imp_{i}^{'} 0.3 \textbf{,   if } |corr(X_i, y)| \leq 0.5  \\ \end{cases} \end{equation}$$`
 
 we &lt;b&gt;weigh down&lt;/b&gt; the variables that were not much correlated to the
 response, using the Spearman correlation.
@@ -277,8 +271,8 @@ train (75%) and test (25%) sets.
 ---
 
 &lt;div class="figure" style="text-align: center"&gt;
-&lt;img src="img/rf_comparison.png" alt="Figure 2. Mean variable importance obtained from a standard Random Forest applied to the 50 simulated datasets, with the correlated variables and without them." width="80%" /&gt;
-&lt;p class="caption"&gt;Figure 2. Mean variable importance obtained from a standard Random Forest applied to the 50 simulated datasets, with the correlated variables and without them.&lt;/p&gt;
+&lt;img src="img/rf_comparison.png" alt="Figure 2. Mean variable importance in a Random Forest applied to the 50 datasets, with the correlated variables and without them." width="80%" /&gt;
+&lt;p class="caption"&gt;Figure 2. Mean variable importance in a Random Forest applied to the 50 datasets, with the correlated variables and without them.&lt;/p&gt;
 &lt;/div&gt;
 
 Clear split of the importance between the correlated variables in a standard Random Forest! **Misleading when we need to select variables.**
@@ -288,16 +282,16 @@ Clear split of the importance between the correlated variables in a standard Ran
 ## Applying the models: simulated data
 
 &lt;div class="figure" style="text-align: center"&gt;
-&lt;img src="img/sim_corr_results.png" alt="Figure 3. Results for the simulated data: Root mean squared errors and counts of final variables in each model " width="100%" /&gt;
-&lt;p class="caption"&gt;Figure 3. Results for the simulated data: Root mean squared errors and counts of final variables in each model &lt;/p&gt;
+&lt;img src="img/sim_corr_results.png" alt="Figure 3. Root mean squared errors and counts of final variables in each fit using the simulated data " width="100%" /&gt;
+&lt;p class="caption"&gt;Figure 3. Root mean squared errors and counts of final variables in each fit using the simulated data &lt;/p&gt;
 &lt;/div&gt;
 
 ---
 
 ## Results: simulated data
 
-- All models selected a small amount of variables. 
-- Less variables for the third method: ideal scenario when we need to do
+- All models selected a small number of variables. 
+- Fewer variables for the third method: ideal scenario when we need to do
 regularization
 
 **Given the correlated variables, which were selected by the models?**
@@ -328,17 +322,17 @@ regularization
 &lt;/table&gt;
 
 
-- **We avoided the correlated predictors issue!**
+- **We avoided the correlated predictors'issue!**
 
 
 ---
 ## Applying the models: real data
 
-- Goal: predict the log of best race distance for breeded race horses
+- Goal: predict the log of best race distance for bred racehorses
 
 &lt;div class="figure" style="text-align: center"&gt;
-&lt;img src="img/horse.jpg" alt="Figure 3. Race horses." width="80%" /&gt;
-&lt;p class="caption"&gt;Figure 3. Race horses.&lt;/p&gt;
+&lt;img src="img/horse.jpg" alt="Figure 3. Racehorses." width="80%" /&gt;
+&lt;p class="caption"&gt;Figure 3. Racehorses.&lt;/p&gt;
 &lt;/div&gt;
 
 ---
@@ -357,10 +351,10 @@ and region.
   - Originally 48910 predictors and 835 observations
   
   - The dataset was previously filtered for the predictors that had at
-  least some correlation with the response (&gt;0.15)
+  least some (Spearman) correlation with the response (&gt;0.15)
     - Resulted in 3582 predictors
     
-  - The filtered dataset was split in 50 different train (75%) and
+  - The filtered dataset was split into 50 different train (75%) and
 test sets (25%). 
 
 
@@ -369,8 +363,8 @@ test sets (25%).
 ## Results: real data
 
 &lt;div class="figure" style="text-align: center"&gt;
-&lt;img src="img/real_data_results.png" alt="Figure 4. Results for the real data: Root mean squared errors and counts of final variables in each model" width="100%" /&gt;
-&lt;p class="caption"&gt;Figure 4. Results for the real data: Root mean squared errors and counts of final variables in each model&lt;/p&gt;
+&lt;img src="img/real_data_results.png" alt="Figure 4. Root mean squared errors and counts of final variables in each fit using the real data" width="100%" /&gt;
+&lt;p class="caption"&gt;Figure 4. Root mean squared errors and counts of final variables in each fit using the real data&lt;/p&gt;
 &lt;/div&gt;
 
 
@@ -521,12 +515,12 @@ measure to use
   - Potentially considering the depth of each tree 
   - Delimiting the maximum number of variables to select
 
-`Code at: https://github.com/brunaw/regularization-rf` 
+`Code: https://github.com/brunaw/regularization-rf` 
 
 ---
 class: center, middle
 
-## Acknowledgments
+## Acknowledgements
 
 This work was supported by a Science Foundation Ireland Career Development Award grant number: 17/CDA/4695
 
